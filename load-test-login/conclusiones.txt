@@ -1,0 +1,35 @@
+CONCLUSIONES - PRUEBA DE CARGA LOGIN (K6)
+
+Contexto:
+- Endpoint bajo prueba: POST https://fakestoreapi.com/auth/login
+- Objetivos:
+  1) 20 TPS
+  2) p95 < 1500 ms
+  3) tasa de error < 3%
+
+Analisis de cumplimiento:
+- TPS:
+  El escenario usa constant-arrival-rate con 20 iteraciones/segundo, por lo que el diseno de la prueba esta alineado con el objetivo de 20 TPS.
+
+- Tiempo de respuesta:
+  Se aplica threshold `http_req_duration: p(95)<1500`, ademas de un check por iteracion de `response time < 1500 ms`.
+
+- Tasa de error:
+  Se aplica threshold `http_req_failed: rate<0.03` y validacion de status HTTP 200.
+
+Nota importante:
+- Este documento confirma cumplimiento de diseno y criterios de validacion automatizados.
+- El cumplimiento real (PASS/FAIL) debe confirmarse con evidencia de ejecucion (`results/summary.json`) en el entorno objetivo.
+
+Posibles cuellos de botella:
+- Saturacion de recursos del servicio (CPU, memoria, I/O) en picos sostenidos.
+- Dependencia de red (latencia variable entre cliente de carga y API).
+- Contencion en componentes de autenticacion (DB/cache/session/token).
+- Limites de rate limiting o protecciones anti abuso del proveedor.
+
+Recomendaciones tecnicas:
+- Ejecutar baseline en horarios controlados y comparar contra ventanas de mayor trafico.
+- Correlacionar metricas K6 con observabilidad del backend (APM, logs, infraestructura).
+- Ajustar `preAllocatedVUs`/`maxVUs` segun comportamiento real para evitar throttling del generador de carga.
+- Agregar pruebas complementarias (stress, spike y soak) para evaluar resiliencia.
+- Versionar resultados por corrida para identificar regresiones de desempeno.

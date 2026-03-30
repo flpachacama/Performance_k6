@@ -32,10 +32,10 @@ load-test-login/
 
 ## Instalacion paso a paso
 
-1. Instala K6 en Windows (Chocolatey):
+1. Instala K6 en Windows:
 
 ```bat
-choco install k6
+winget install k6
 ```
 
 2. Verifica la instalacion:

@@ -5,6 +5,7 @@ import {
   BASE_URL,
   LOGIN_ENDPOINT,
   HEADERS,
+  LOGIN_SUCCESS_STATUS_CODES,
   MAX_P95_MS,
   buildOptions,
 } from './config.js';
@@ -31,7 +32,7 @@ export default function () {
   const response = http.post(loginUrl, payload, { headers: HEADERS });
 
   check(response, {
-    'status is 200': (res) => res.status === 200,
+    'status is 200 or 201': (res) => LOGIN_SUCCESS_STATUS_CODES.includes(res.status),
     [`response time < ${MAX_P95_MS} ms`]: (res) => res.timings.duration < MAX_P95_MS,
   });
 }

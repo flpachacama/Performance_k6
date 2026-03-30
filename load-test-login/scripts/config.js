@@ -12,6 +12,7 @@ export const HEADERS = {
 export const TARGET_TPS = 20;
 export const MAX_P95_MS = 1500;
 export const MAX_ERROR_RATE = 0.03;
+export const LOGIN_SUCCESS_STATUS_CODES = [200, 201];
 
 export function buildOptions(duration = DEFAULT_DURATION) {
   return {

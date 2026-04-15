@@ -1,107 +1,88 @@
 # load-test-login
 
-Proyecto de prueba de carga para el endpoint de autenticacion `POST /auth/login` de Fake Store API usando K6.
+Proyecto de pruebas de performance para `POST /auth/login` con K6, ajustado al workflow final en `load-test-login/AI_Protocol/AI_Workflow_v2.md`.
 
-## Objetivo
+## Objetivos base (SLA)
 
-Validar que el servicio de login cumpla los siguientes criterios de desempeno:
+- `20 TPS` (baseline inicial)
+- `http_req_duration p(95) < 1500 ms`
+- `http_req_failed < 3%`
 
-- **20 TPS** (20 iteraciones por segundo)
-- **p95 < 1500 ms**
-- **error rate < 3%**
+## Escenarios soportados
 
-## Tecnologia usada
+El script `load-test-login/scripts/login_test.js` usa `TEST_TYPE` para seleccionar el escenario:
 
-- **K6** (recomendado: `v0.49.0` o superior)
+- `baseline`: carga constante de `20 TPS` con `constant-arrival-rate`
+- `ramp`: incremento progresivo `20 -> 50 -> 100 VUs`
+- `stress`: incremento para detectar punto de quiebre (`50 -> 100 -> 150 -> 200 VUs`)
+- `spike`: pico abrupto (`20 -> 200 -> 20 VUs`)
 
-## Estructura del proyecto
+## Configuracion por variables de entorno
+
+- `BASE_URL` (default: `https://fakestoreapi.com`)
+- `TEST_TYPE` (default: `baseline`)
+- `TEST_DURATION` (solo `baseline`, default: `1m`)
+- `PRE_ALLOCATED_VUS` (solo `baseline`, default: `50`)
+- `MAX_VUS` (solo `baseline`, default: `200`)
+
+## Ejecucion en Windows (`cmd.exe`)
+
+```bat
+cd load-test-login
+
+REM Baseline
+k6 run scripts\login_test.js --env TEST_TYPE=baseline
+
+REM Ramp-Up
+k6 run scripts\login_test.js --env TEST_TYPE=ramp
+
+REM Stress
+k6 run scripts\login_test.js --env TEST_TYPE=stress
+
+REM Spike
+k6 run scripts\login_test.js --env TEST_TYPE=spike
+```
+
+## Exportacion de resultados
+
+`login_test.js` ya genera automaticamente:
+
+- `results/summary.json`
+- `results/{test_type}_{timestamp}_summary.json`
+
+Para `metrics.json` (serie completa), ejecutar con salida JSON:
+
+```bat
+cd load-test-login
+k6 run scripts\login_test.js --env TEST_TYPE=baseline --out json=results\metrics.json
+```
+
+## Convencion recomendada para versionado
+
+Para mantener evidencia comparable por corrida:
+
+- `results/baseline_YYYYMMDD_HHMMSS_summary.json`
+- `results/ramp_YYYYMMDD_HHMMSS_summary.json`
+- `results/stress_YYYYMMDD_HHMMSS_summary.json`
+- `results/spike_YYYYMMDD_HHMMSS_summary.json`
+
+## Metricas clave para analisis
+
+- `http_req_duration` (`p95`, `p99`)
+- `http_req_failed`
+- `iterations`
+- `vus` / `vus_max`
+- throughput real (`http_reqs`)
+
+## Estructura relevante
 
 ```text
 load-test-login/
-|-- data/
-|   `-- users.csv
+|-- data/users.csv
+|-- results/
 |-- scripts/
 |   |-- config.js
 |   |-- login_test.js
 |   `-- utils.js
-|-- results/
-|-- README.md
-|-- conclusiones.txt
-`-- AI_Workflow.md
+`-- AI_Protocol/AI_Workflow_v2.md
 ```
-
-## Instalacion paso a paso
-
-1. Instala K6 en Windows:
-
-```bat
-winget install k6
-```
-
-2. Verifica la instalacion:
-
-```bat
-k6 version
-```
-
-## Datos de entrada
-
-El archivo `data/users.csv` contiene usuarios para la prueba y se carga con `SharedArray` para optimizar memoria.
-
-## Configuracion
-
-La configuracion central esta en `scripts/config.js`.
-
-Variables opcionales por entorno:
-
-- `BASE_URL` (default: `https://fakestoreapi.com`)
-- `TEST_DURATION` (default: `1m`)
-- `PRE_ALLOCATED_VUS` (default: `50`)
-- `MAX_VUS` (default: `200`)
-
-Ejemplo de uso en Windows (`cmd.exe`):
-
-```bat
-set TEST_DURATION=2m
-set PRE_ALLOCATED_VUS=60
-set MAX_VUS=250
-k6 run scripts\login_test.js
-```
-
-## Como ejecutar la prueba
-
-Ejecucion basica:
-
-```bat
-k6 run scripts\login_test.js
-```
-
-Ejecucion con export de resumen JSON:
-
-```bat
-k6 run --summary-export=results\summary.json scripts\login_test.js
-```
-
-Ejecucion con stream de metricas en JSON (analisis posterior):
-
-```bat
-k6 run --out json=results\metrics.json scripts\login_test.js
-```
-
-## Ejemplo de ejecucion
-
-```bat
-set TEST_DURATION=1m
-k6 run --summary-export=results\summary.json scripts\login_test.js
-```
-
-## Explicacion de metricas
-
-- **TPS (Transactions Per Second):** en este test se controla con `constant-arrival-rate` a `rate: 20` por segundo.
-- **p95 (http_req_duration):** el 95% de las respuestas debe ser menor a `1500 ms`.
-- **error rate (http_req_failed):** menos del `3%` de requests fallidos.
-
-## Generacion y lectura de reportes
-
-- `results/summary.json`: resumen final para seguimiento y evidencia.
-- `results/metrics.json`: serie detallada por muestra para analisis profundo.

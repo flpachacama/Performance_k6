@@ -1,58 +1,45 @@
-# Conclusiones de la prueba de carga - Login
+# Conclusiones de performance - Login
 
-**Fecha de analisis:** 30 de marzo de 2026  
+**Fecha de analisis:** 15 de abril de 2026  
 **Endpoint evaluado:** `POST https://fakestoreapi.com/auth/login`
 
-## Objetivos definidos
+## Criterios de aceptacion
 
-- **TPS objetivo:** 20 transacciones por segundo
-- **Rendimiento objetivo:** `p95 < 1500 ms`
-- **Calidad objetivo:** `error rate < 3%`
+- Baseline inicial: `20 TPS`
+- `http_req_duration p(95) < 1500 ms`
+- `http_req_failed < 3%`
 
-## Resultados observados (ultimas ejecuciones)
+## Corridas ejecutadas y evidencia actual
 
-Se ejecutaron dos corridas consecutivas con escenario `constant-arrival-rate` a `20 iteraciones/s` por `1m`.
+Se mantiene evidencia completa para escenario baseline (dos corridas historicas) y se deja preparada la estructura para `ramp`, `stress` y `spike`.
 
-**Corrida 1 (`k6 run scripts\login_test.js`):**
+- Baseline run 1: `~19.88 req/s`, `p95 402.54 ms`, `error rate 0.00%`
+- Baseline run 2: `~19.90 req/s`, `p95 398.01 ms`, `error rate 0.00%`
+- Outliers puntuales detectados en run 2: maximo `6.55 s` sin impacto en p95
 
-- Iteraciones/requests: `1200`
-- TPS real: `19.88 req/s`
-- `http_req_duration p(95)`: `402.54 ms`
-- `http_req_failed`: `0.00%` (`0/1200`)
-- Checks: `2400/2400` exitosos (`100%`)
+## Tabla comparativa obligatoria entre escenarios
 
-**Corrida 2 (`k6 run --summary-export=results\summary.json scripts\login_test.js`):**
+| Escenario | TPS | p95 (ms) | Error Rate | VUs usados | Resultado |
+| --------- | --- | -------- | ---------- | ---------- | --------- |
+| Baseline  | 19.90 | 398.01 | 0.00% | ~13/50 (max 200) | Cumple |
+| Ramp-Up   | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
+| Stress    | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
+| Spike     | Pendiente | Pendiente | Pendiente | Pendiente | Pendiente |
 
-- Iteraciones/requests: `1201`
-- TPS real: `19.90 req/s`
-- `http_req_duration p(95)`: `398.01 ms`
-- `http_req_failed`: `0.00%` (`0/1201`)
-- Checks: `2400/2402` exitosos (`99.91%`)
-- Outliers observados: `2` checks de tiempo > `1500 ms` (maximo `6.55 s`)
+## Interpretacion
 
-## Evaluacion de cumplimiento
+- **Punto de degradacion:** pendiente de confirmar en `ramp` (se espera mayor latencia al acercarse a 100 VUs).
+- **Punto de quiebre:** pendiente de identificar en `stress` (donde sube error rate y cae throughput efectivo).
+- **Capacidad maxima sostenible:** con evidencia actual solo se confirma estabilidad en baseline.
+- **Resiliencia ante picos:** pendiente de validar con `spike`.
 
-- **TPS (20):** **Cumple**. El throughput se mantiene estable alrededor de `19.9 req/s`.
-- **Tiempo de respuesta (p95 < 1500 ms):** **Cumple** con amplio margen (`~0.40 s`).
-- **Tasa de error (< 3%):** **Cumple** (`0.00%`).
+## Estado del proyecto frente al workflow v2
 
-## Analisis tecnico
+- Escenarios implementados: `baseline`, `ramp`, `stress`, `spike` con `TEST_TYPE`.
+- Thresholds y checks estandarizados para comparabilidad entre corridas.
+- Resumen versionado por corrida en `results/{test_type}_{timestamp}_summary.json`.
+- Export de `metrics.json` habilitado via `--out json=results\metrics.json`.
 
-El resultado actual muestra un comportamiento consistente y saludable para el objetivo de carga definido. La latencia central (`avg`, `med`, `p90`, `p95`) permanece en rangos bajos y estables, y no se observan fallas HTTP en las solicitudes realizadas. Esto confirma que los ajustes aplicados al proyecto (validacion de status `200/201` y correccion de datos de entrada) resolvieron el problema anterior de error rate elevado.
+## Siguiente paso recomendado
 
-En la corrida con export de resumen se detectaron dos valores atipicos de latencia (hasta `6.55 s`) que impactan checks puntuales, pero no alteran el percentil p95 ni los thresholds de aceptacion. Tecnica y estadisticamente, esto se interpreta como ruido transitorio u outliers aislados, no como degradacion sostenida del servicio bajo el nivel de carga actual.
-
-## Acciones aplicadas en el proyecto
-
-- Se ajusto la validacion de estado exitoso para aceptar `200` o `201`.
-
-## Recomendaciones tecnicas
-
-- Mantener `results/summary.json` versionado por corrida para trazabilidad de tendencia.
-- Agregar thresholds complementarios (por ejemplo `p(99)` o regla para outliers) si se requiere mayor rigor de SLO.
-- Ejecutar una corrida `smoke` corta antes de cada corrida formal para validar datos y conectividad.
-- Programar pruebas de stress/spike adicionales para caracterizar el comportamiento fuera del objetivo de 20 TPS.
-
-## Conclusion final
-
-Con la evidencia de las ultimas corridas, el sistema **cumple todos los criterios de aceptacion definidos** para este escenario de carga: TPS objetivo, p95 y tasa de error. Los outliers observados son puntuales y no comprometen la aceptacion del test, aunque conviene monitorearlos en ejecuciones futuras para confirmar estabilidad a largo plazo.
+Ejecutar y registrar al menos una corrida por cada escenario (`ramp`, `stress`, `spike`) para completar la tabla comparativa y determinar degradacion/quiebre con evidencia objetiva.
